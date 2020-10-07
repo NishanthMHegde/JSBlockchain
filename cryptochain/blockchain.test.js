@@ -46,7 +46,23 @@ describe("Blockchain()", ()=>{
 		describe("wrong hash", ()=>{
 			it("chain invalid due to wrong hash", ()=>{
 				const new_block = blockchain.add_block({data:["1", "2"]});
-				blockchain.chain[1].hash = 'wrong_hash';
+				blockchain.chain[1].hash = '00101010';
+				expect(Blockchain.valid_chain(blockchain.chain)).toBe(false);
+			});
+			
+		});
+		describe("wrong proof of work", ()=>{
+			it("chain invalid due to wrong proof of work", ()=>{
+				const new_block = blockchain.add_block({data:["1", "2"]});
+				blockchain.chain[1].hash = 'xyzpqr';
+				expect(Blockchain.valid_chain(blockchain.chain)).toBe(false);
+			});
+			
+		});
+		describe("wrong difficulty", ()=>{
+			it("chain invalid due to wrong difficulty", ()=>{
+				const new_block = blockchain.add_block({data:["1", "2"]});
+				blockchain.chain[1].difficulty = 10;
 				expect(Blockchain.valid_chain(blockchain.chain)).toBe(false);
 			});
 			

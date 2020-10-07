@@ -1,7 +1,7 @@
 const Block = require('./block');
-const {GENESIS_BLOCK} = require('./config');
+const {GENESIS_BLOCK, MINE_RATE} = require('./config');
 const cryptoHash = require('./crypto-hash');
-
+const hexToBinary = require('hex-to-binary')
 
 describe('Block()', () =>{
 	const timestamp = '12345';
@@ -51,10 +51,41 @@ describe('Block()', () =>{
 		it('proper data values', ()=>{
 			expect(mined_block.data).toEqual(data);
 		});
-
-		it('hash value is correct', ()=> {
-			expect(mined_block.hash).toEqual(cryptoHash(mined_block.data, mined_block.lastHash, mined_block.timestamp));
+		it('has a nonce', ()=>{
+			expect(mined_block.nonce).not.toEqual(undefined);
 		});
+		it('has a difficulty', ()=>{
+			expect(mined_block.difficulty).not.toEqual(undefined);
+		});
+		it('hash value is correct', ()=> {
+			expect(mined_block.hash).toEqual(cryptoHash(mined_block.data, mined_block.lastHash, mined_block.timestamp, mined_block.nonce, mined_block.difficulty));
+		});
+		it('difficulty values differ by not more than 1', ()=>{
+			expect((Math.abs(mined_block.difficulty - genesis_block.difficulty) > 1)).toEqual(false);
+		});
+		it('Proof of work is correct', ()=> {
+			expect(hexToBinary(mined_block.hash).substring(0, mined_block.difficulty)).toEqual('0'.repeat(mined_block.difficulty));
+		});
+
+		describe('difficulty is reduced by 1', ()=> {
+			it('difficulty value reduced by 1 is returned', ()=>{
+				const block1 = Block.mine_block({last_block:Block.genesis(), data:['1', '2']});
+				const block2 = Block.mine_block({last_block:block1, data:['2', '4']});
+				block2.timestamp = block1.timestamp + MINE_RATE + 1;
+
+			expect(Block.adjust_difficulty({original_block: block1, timestamp:block2.timestamp})).toEqual((block1.difficulty - 1));
+		});
+		});
+
+		describe('difficulty is increased by 1', ()=> {
+			it('difficulty value reduced by 1 is returned', ()=>{
+				const block1 = Block.mine_block({last_block:Block.genesis(), data:['1', '2']});
+				const block2 = Block.mine_block({last_block:block1, data:['2', '4']});
+
+			expect(Block.adjust_difficulty({original_block: block1, timestamp:block2.timestamp})).toEqual((block1.difficulty + 1));
+		});
+		});
+		
 
 	});
 });

@@ -1,6 +1,7 @@
 const {GENESIS_BLOCK} = require('./config');
 const cryptoHash = require('./crypto-hash');
 const Block = require('./block');
+const hexToBinary = require('hex-to-binary');
 
 class Blockchain{
 	constructor(){
@@ -23,12 +24,19 @@ class Blockchain{
 			const last_block = chain[i-1];
 			//check if last hash is equal
 			if (!(block.lastHash === last_block.hash)){
-				// console.log(`last hashes ${block.lastHash} and ${last_block.hash} do not match`)
 				return false;
 			}
 
+			//check if block difficulty differes by 1 unit
+			if((Math.abs(block.difficulty - last_block.difficulty) > 1)){
+				return false;
+			}
+			//check the proof of work requirement
+			if(!(hexToBinary(block.hash).substring(0, block.difficulty) === '0'.repeat(block.difficulty))){
+				return false;
+			}
 			//compute the hash of the block and re-verify it
-			const new_hash = cryptoHash(block.timestamp, block.data, block.lastHash);
+			const new_hash = cryptoHash(block.timestamp, block.data, block.lastHash, block.nonce, block.difficulty);
 			if (!(new_hash===block.hash)){
 				return false;
 			}
@@ -59,9 +67,9 @@ module.exports = Blockchain;
 // new_blockchain = new Blockchain();
 // new_blockchain.add_block({data:["1", "2"]});
 // new_blockchain.add_block({data:["3", "4"]});
-// new_blockchain.add_block({data:["5", "6"]});
-// console.log(blockchain.chain);
+// // new_blockchain.add_block({data:["5", "6"]});
+// // console.log(blockchain.chain);
 // console.log(new_blockchain.chain);
-
+// console.log(Blockchain.valid_chain(new_blockchain.chain));
 // blockchain.replace_chain(new_blockchain.chain);
 // console.log(blockchain.chain);
