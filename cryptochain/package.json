@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "jest --watchAll"
+    "test": "jest --watchAll",
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "dev-peer": "cross-env PEER_PORT='true' nodemon index.js"
   },
   "keywords": [],
   "author": "",
@@ -13,6 +16,12 @@
     "jest": "^26.4.2"
   },
   "dependencies": {
-    "hex-to-binary": "^1.0.1"
+    "body-parser": "^1.19.0",
+    "cross-env": "^7.0.2",
+    "express": "^4.17.1",
+    "hex-to-binary": "^1.0.1",
+    "nodemon": "^2.0.4",
+    "redis": "^3.0.2",
+    "redis-server": "^1.2.2"
   }
 }
