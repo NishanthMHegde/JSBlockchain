@@ -1,5 +1,5 @@
-const {GENESIS_BLOCK} = require('./config');
-const cryptoHash = require('./crypto-hash');
+const {GENESIS_BLOCK} = require('../config');
+const cryptoHash = require('../util/crypto-hash');
 const Block = require('./block');
 const hexToBinary = require('hex-to-binary');
 
