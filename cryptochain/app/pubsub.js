@@ -2,13 +2,15 @@ const redis = require('redis');
 
 const CHANNELS = {
 	BLOCKCHAIN: 'BLOCKCHAIN',
+	TRANSACTION: 'TRANSACTION',
 	TEST: 'TEST'
 };
 class PubSub{
-	constructor({blockchain}){
+	constructor({blockchain, transactionPool}){
 		this.publisher = redis.createClient();
 		this.subscriber = redis.createClient();
 		this.blockchain = blockchain;
+		this.transactionPool = transactionPool;
 		this.subscribe();
 		this.subscriber.on('message', (channel, message) =>{
 			this.handle_message(channel, message);
@@ -21,6 +23,11 @@ class PubSub{
 			const new_chain = JSON.parse(message);
 			this.blockchain.replace_chain(new_chain);
 			console.log("Replaced the chain");
+		}
+		else if (channel ==='TRANSACTION'){
+			const transaction = JSON.parse(message);
+			this.transactionPool.setTransaction(transaction);
+			console.log("Consumed the new transaction");
 		}
 	}
 
