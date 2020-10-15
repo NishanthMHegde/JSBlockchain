@@ -21,7 +21,9 @@ class PubSub{
 		console.log(`Message ${message} received on channel ${channel}`);
 		if (channel ==='BLOCKCHAIN'){
 			const new_chain = JSON.parse(message);
-			this.blockchain.replace_chain(new_chain);
+			this.blockchain.replace_chain(new_chain, ()=>{
+				this.transactionPool.clearBlockchainTransactions(new_chain);
+			});
 			console.log("Replaced the chain");
 		}
 		else if (channel ==='TRANSACTION'){

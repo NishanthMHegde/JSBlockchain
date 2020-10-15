@@ -1,6 +1,7 @@
 const Transaction = require('./transaction');
 const Wallet = require('./index');
 const {verifySignature} = require('../util');
+const {MINING_REWARD, MINING_INPUT} = require('../config');
 
 describe("Transaction", ()=>{
 
@@ -126,6 +127,21 @@ describe("Transaction", ()=>{
 				}).toThrow("amount exceeds balance");
 			});
 
+		});
+	});
+
+	describe("rewardTransaction()", ()=>{
+		let minerWallet;
+		beforeAll(()=>{
+			minerWallet = new Wallet();
+			reward_transaction = Transaction.rewardTransaction({minerWallet: minerWallet});
+		});
+
+		it("has the mining reward", ()=>{
+			expect(reward_transaction.outputMap[minerWallet.publicKey]).toEqual(MINING_REWARD);
+		});
+		it("has the mining input", ()=>{
+			expect(reward_transaction.input).toEqual(MINING_INPUT);
 		});
 	});
 	

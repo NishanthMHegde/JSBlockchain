@@ -11,10 +11,12 @@ const blockchain = new Blockchain();
 const wallet = new Wallet();
 const transactionPool = new TransactionPool();
 const pubSub = new PubSub({blockchain, transactionPool});
+const TransactionMiner = require('./wallet/transactionminer');
 const app = express();
 const DEFAULT_PORT = 3000;
 const DEFAULT_URL = `http://localhost:${DEFAULT_PORT}`;
 
+const transactionMiner = new TransactionMiner({blockchain, pubSub, wallet, transactionPool});
 //code to sync the chains when peer port is used
 const syncRootInformation = () =>{
 	request({url:`${DEFAULT_URL}/api/blocks`}, (error, response, body)=>{
@@ -77,6 +79,12 @@ app.post('/api/transact', (req,res)=>{
 //get the transactionMap
 app.get('/api/get-transaction-map', (req, res)=>{
 	res.json(transactionPool.transactionMap);
+});
+
+//mine the transactions
+app.get('/api/mine-transactions', (req, res)=>{
+	transactionMiner.mineTransactions();
+	res.redirect('/api/blocks');
 });
 
 let PEER_PORT;
