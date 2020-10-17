@@ -1,6 +1,8 @@
 const Wallet = require('./index');
 const {verifySignature} = require('../util');
 const Transaction = require('./transaction');
+const Blockchain = require('../blockchain');
+const {STARTING_BALANCE} = require('../config');
 
 describe("Wallet()", ()=>{
 	let wallet;
@@ -71,6 +73,65 @@ describe("Wallet()", ()=>{
 			}).toThrow("amount exceeds balance");
 			});
 			
+		});
+	});
+
+	describe("calculateBalance()", ()=>{
+		let wallet, blockchain;
+
+		beforeEach(()=>{
+			wallet = new Wallet();
+			blockchain = new Blockchain();
+		});
+
+		describe("empty blockchain", ()=>{
+			it("returns the STARTING_BALANCE", ()=>{
+				expect(Wallet.calculateBalance({address: wallet.publicKey, chain: blockchain.chain})).
+				toEqual(STARTING_BALANCE);
+			});
+		});
+
+		describe("wallet has only received transactions", ()=>{
+			beforeEach(()=>{
+				transaction1 = new Wallet().createTransaction({recipient:wallet.publicKey, amount:45});
+				transaction2 = new Wallet().createTransaction({recipient:wallet.publicKey, amount:55});
+				blockchain.add_block({data:[transaction1, transaction2]});
+			});
+
+			it("has the correct amount in the balance", ()=>{
+				expect(Wallet.calculateBalance({address: wallet.publicKey, chain:blockchain.chain})).
+				toEqual(STARTING_BALANCE + transaction1.outputMap[wallet.publicKey] + transaction2.outputMap[wallet.publicKey]);
+			});
+		});
+
+		describe("wallet has only conducted transactions", ()=>{
+			beforeEach(()=>{
+				transaction1 = wallet.createTransaction({recipient:"foo1", amount:45, chain: blockchain.chain});
+				// transaction2 = wallet.createTransaction({recipient:"foo2", amount:55, chain: blockchain.chain});
+				blockchain.add_block({data:[transaction1]});
+			});
+
+			it("has the correct amount in the balance", ()=>{
+				expect(Wallet.calculateBalance({address: wallet.publicKey, chain:blockchain.chain})).
+				toEqual(transaction1.outputMap[wallet.publicKey]);
+			});
+		});
+
+		describe("wallet has transactions from multiple blocks", ()=>{
+			beforeEach(()=>{
+				transaction1 = wallet.createTransaction({recipient:"foo1", amount:45, chain: blockchain.chain});
+				// transaction2 = wallet.createTransaction({recipient:"foo2", amount:55, chain: blockchain.chain});
+				blockchain.add_block({data:[transaction1]});
+
+				transaction2 = Transaction.rewardTransaction({minerWallet: wallet});
+				transaction3 = new Wallet().createTransaction({recipient:wallet.publicKey, amount:27, chain: blockchain.chain});
+				blockchain.add_block({data: [transaction2, transaction3]});
+			});
+
+			it("has the correct amount in the balance when multip blocks are found", ()=>{
+				expect(Wallet.calculateBalance({address: wallet.publicKey, chain:blockchain.chain})).
+				toEqual(transaction1.outputMap[wallet.publicKey] + transaction2.outputMap[wallet.publicKey] + transaction3.outputMap[wallet.publicKey]);
+			});
 		});
 	});
 });
