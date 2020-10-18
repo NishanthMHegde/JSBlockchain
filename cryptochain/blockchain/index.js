@@ -2,6 +2,8 @@ const {GENESIS_BLOCK} = require('../config');
 const cryptoHash = require('../util/crypto-hash');
 const Block = require('./block');
 const hexToBinary = require('hex-to-binary');
+const {MINING_REWARD, MINING_INPUT} = require('../config');
+const Transaction = require('../wallet/transaction');
 
 class Blockchain{
 	constructor(){
@@ -40,12 +42,14 @@ class Blockchain{
 			if (!(new_hash===block.hash)){
 				return false;
 			}
+
+
 		}
 		return true;
 
 	}
 
-	replace_chain(chain, onSuccess){
+	replace_chain(chain, validateTransactions=true, onSuccess){
 		if (!(chain.length > this.chain.length)){
 			console.error("The chain length is lesser than current chain length");
 			return;
@@ -54,6 +58,13 @@ class Blockchain{
 			console.error("The chain is invalid");
 			return;
 		}
+		//check if all the transactions in the chain are valid.
+		if (validateTransactions){
+		if (!Blockchain.validTransactionData(chain)){
+			console.error("The transactions in the chain are invalid");
+			return ;
+		}
+	}
 		if (onSuccess){
 			onSuccess();
 		}
@@ -61,6 +72,50 @@ class Blockchain{
 		console.log("Chain replacement successful!")
 		return;
 		
+	}
+
+	static validTransactionData(chain){
+
+		//a transaction is said to be valid in a block if there is only one reward transaction.
+		// if the transaction reward is correct.
+		//if the transaction reward input is correct.
+		//if the transaction is valid.
+		//if a transaction appears only once in a blockchain.
+		let rewardTransactionCount =0;
+		let transactionSet = new Set();
+		for (let i=1; i<chain.length; i++){
+			let block = chain[i];
+			rewardTransactionCount =0;
+			let transactionSet = new Set();
+			for(let transaction of block.data){
+				if (transaction.input.address === MINING_INPUT.address){
+					rewardTransactionCount = rewardTransactionCount + 1;
+					if(rewardTransactionCount > 1){
+						console.error("More than 1 reward transaction was found");
+						return;
+					}
+					if(Object.values(transaction.outputMap)[0] !== MINING_REWARD){
+						console.error("The mining reward was not valid");
+						return;
+					}
+				}
+				else {
+					if(!Transaction.validate_transaction(transaction)){
+						console.error("The transaction was not valid");
+						return;
+					}
+
+					if (transactionSet.has(transaction)){
+						console.error("The transaction was found to be a duplicate");
+						return;
+					}
+
+				}
+				transactionSet.add(transaction);
+
+			}
+		}
+		return true;
 	}
 }
 

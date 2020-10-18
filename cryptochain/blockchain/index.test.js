@@ -2,6 +2,8 @@ const {GENESIS_BLOCK} = require('../config');
 const cryptoHash = require('../util/crypto-hash');
 const Block = require('./block');
 const Blockchain = require('./index');
+const Transaction = require('../wallet/transaction');
+const Wallet = require('../wallet');
 
 describe("Blockchain()", ()=>{
 	let blockchain, new_blockchain;
@@ -89,7 +91,7 @@ describe("Blockchain()", ()=>{
 			describe("chain replacement fails due to bad genesis block", ()=>{
 				beforeEach(()=>{
 					new_blockchain.chain[0].data = ['abc'];
-					blockchain.replace_chain(new_blockchain.chain);
+					blockchain.replace_chain(new_blockchain.chain,validateTransactions=false);
 				});
 				it("bad genesis", ()=>{
 					console.log(blockchain.chain);
@@ -106,7 +108,7 @@ describe("Blockchain()", ()=>{
 
 				beforeEach(()=>{
 					new_blockchain.chain[2].lastHash = 'abc';
-					blockchain.replace_chain(new_blockchain.chain);
+					blockchain.replace_chain(new_blockchain.chain,validateTransactions=false);
 				});
 				it("bad lastHash", ()=>{
 					expect(blockchain.chain).toEqual(original_chain);
@@ -121,7 +123,7 @@ describe("Blockchain()", ()=>{
 			describe("chain replacement fails due to wrong hash", ()=>{
 				beforeEach(()=>{
 					new_blockchain.chain[3].hash = 'abc';
-					blockchain.replace_chain(new_blockchain.chain);
+					blockchain.replace_chain(new_blockchain.chain,validateTransactions=false);
 				});
 				it("wrong hash", ()=>{
 					expect(blockchain.chain).toEqual(original_chain);
@@ -136,7 +138,7 @@ describe("Blockchain()", ()=>{
 				beforeEach(()=>{
 					blockchain = new Blockchain();
 					new_blockchain = new Blockchain();
-					blockchain.replace_chain(new_blockchain.chain);
+					blockchain.replace_chain(new_blockchain.chain,validateTransactions=false);
 				});
 				it("small length", ()=>{
 					expect(blockchain.chain).toEqual(original_chain);
@@ -149,7 +151,7 @@ describe("Blockchain()", ()=>{
 
 		describe("chain replacement is successful",()=> {
 			beforeEach(()=>{
-				blockchain.replace_chain(new_blockchain.chain);
+				blockchain.replace_chain(new_blockchain.chain,validateTransactions=false);
 				
 			});
 			
@@ -160,5 +162,73 @@ describe("Blockchain()", ()=>{
 					expect(logMock).toHaveBeenCalled();
 				});
 		});
+	});
+
+	describe("validTransactionData()", ()=>{
+		let blockchain, wallet, errorMock;
+		beforeEach(()=>{
+			errorMock = jest.fn();
+			global.console.error = errorMock;
+			blockchain = new Blockchain();
+			wallet = new Wallet();
+			transaction = wallet.createTransaction({recipient: "foo", amount: 59});
+			reward_transaction = Transaction.rewardTransaction({minerWallet: wallet});
+		});
+
+		describe("chain is invalid due to multiple reward transactions", ()=>{
+			beforeEach(()=>{
+				blockchain.add_block({data:[reward_transaction, reward_transaction]});
+				Blockchain.validTransactionData(blockchain.chain);
+			});
+
+			it("errorMock is called", ()=>{
+				expect(errorMock).toHaveBeenCalled();
+			});
+		});
+
+		describe("chain is invalid due to wrong transaction reward", ()=>{
+			beforeEach(()=>{
+				reward_transaction.outputMap[wallet.publicKey] = 134;
+				blockchain.add_block({data:[reward_transaction]});
+				Blockchain.validTransactionData(blockchain.chain);
+			});
+
+			it("errorMock is called", ()=>{
+				expect(errorMock).toHaveBeenCalled();
+			});
+		});
+
+		describe("chain is invalid due to duplicate transactions", ()=>{
+			beforeEach(()=>{
+				blockchain.add_block({data:[transaction, transaction, reward_transaction]});
+				Blockchain.validTransactionData(blockchain.chain);
+			});
+
+			it("errorMock is called", ()=>{
+				expect(errorMock).toHaveBeenCalled();
+			});
+		});
+		describe("chain is invalid due to invalid transaction", ()=>{
+			beforeEach(()=>{
+				transaction.input.signature = new Wallet().sign("foo");
+				blockchain.add_block({data:[transaction, reward_transaction]});
+				Blockchain.validTransactionData(blockchain.chain);
+			});
+
+			it("errorMock is called", ()=>{
+				expect(errorMock).toHaveBeenCalled();
+			});
+		});
+
+		describe("chain is valid", ()=>{
+			beforeEach(()=>{
+				blockchain.add_block({data:[transaction, reward_transaction]});
+			});
+
+			it("errorMock is called", ()=>{
+				expect(Blockchain.validTransactionData(blockchain.chain)).toBe(true);
+			});
+		});
+
 	});
 });
